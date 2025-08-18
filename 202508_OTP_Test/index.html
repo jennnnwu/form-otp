@@ -21,7 +21,7 @@
       <input type="radio" name="gender" value="女">女
   </label>
 
-  <label>手機 <input id="phone" required></label>
+  <label>手機 +886 <input id="phone" placeholder="912345678" required></label>
   <button type="button" id="sendOtp">發送OTP</button>
 
   <div class="otp-area">
@@ -40,48 +40,80 @@
   <button id="submitBtn" disabled>送出</button>
 </form>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
 <script>
-// TODO: 這裡先使用假OTP驗證：密碼固定輸入 123456 即成功
-let isOtpPassed = false;
+  const ACCOUNT_SID  = "ACbeafa0d9172768d4f94afc054b70a0fd";
+  const AUTH_TOKEN   = "6fb77ef2b44a3113507bf227f5ab1684";
+  const VERIFY_SID   = "VAdfdcd6e0f291f5a7ff4656a244b7f2bb";
+  const APP_SCRIPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbwhLAwCKpKef2aUhYdvEmPv8hLP0_XsN4zUMzzqz8X6_jt7ACL3Yse7QHPNzgCGfAFJ/exec";
 
-document.getElementById("sendOtp").onclick = function(){
-  alert("驗證碼已發送到你輸入的手機（測試版請直接填 123456）");
-  document.querySelector(".otp-area").style.display = "block";
-};
+  let isOtpPassed = false;
 
-document.getElementById("verifyOtp").onclick = function(){
-  const otp = document.getElementById("otp").value;
-  if(otp == "123456"){
-    isOtpPassed = true;
-    document.getElementById("otpResult").textContent = "✅ 驗證成功";
-    document.getElementById("submitBtn").disabled = false;
-  }else{
-    document.getElementById("otpResult").textContent = "❌ 驗證失敗";
-  }
-};
+  document.getElementById("sendOtp").onclick = async function(){
+    const phone = document.getElementById("phone").value;
+    const api = `https://verify.twilio.com/v2/Services/${VERIFY_SID}/Verifications`;
+    alert('OTP 發送中…');
 
-document.getElementById("myForm").onsubmit = function(e){
-  e.preventDefault();
-  if(!isOtpPassed){ alert("請先完成手機驗證"); return; }
-
-  const data = {
-    name:     document.getElementById("name").value,
-    birthday: document.getElementById("birthday").value,
-    email:    document.getElementById("email").value,
-    gender:   document.querySelector('input[name="gender"]:checked').value,
-    phone:    document.getElementById("phone").value,
-    plan:     Array.from(document.querySelectorAll(".plan:checked")).map(x=>x.value)
+    await axios.post(api, {
+        To: `+886${phone}`,
+        Channel: "sms"
+      }, {
+        auth: { username: ACCOUNT_SID, password: AUTH_TOKEN }
+      })
+      .then(()=> {
+        alert("驗證碼已發送");
+        document.querySelector(".otp-area").style.display = "block";
+      })
+      .catch((e)=>{
+        console.error(e);
+        alert("發送失敗，請檢查手機格式或白名單！");
+      });
   };
 
-  fetch("https://script.google.com/macros/s/AKfycby2EnrdiuB18dVV55DaTwaRh5r_b7X7s5TdakpS-25j58h8k8xOD6wOtm_mc_y3seSA/exec",{
-    method:"POST",
-    body:JSON.stringify(data)
-  }).then(r=>r.text())
-    .then(res=>{
-      alert("送出成功！");
-      window.location.href="success.html"; // ✔️ 有網址時改成你的成功頁
-    });
-}
+  document.getElementById("verifyOtp").onclick = async function(){
+    const phone = document.getElementById("phone").value;
+    const otp = document.getElementById("otp").value;
+    const api = `https://verify.twilio.com/v2/Services/${VERIFY_SID}/VerificationCheck`;
+
+    await axios.post(api, {
+        To: `+886${phone}`,
+        Code: otp
+      }, {
+        auth: { username: ACCOUNT_SID, password: AUTH_TOKEN }
+      })
+      .then((res)=>{
+        if(res.data.status==="approved"){
+          isOtpPassed = true;
+          document.getElementById("otpResult").textContent = "✅ 驗證成功";
+          document.getElementById("submitBtn").disabled = false;
+        }else{
+          document.getElementById("otpResult").textContent = "❌ 驗證失敗";
+        }
+      })
+      .catch(()=> alert("驗證失敗"));
+  };
+
+  document.getElementById("myForm").onsubmit = function(e){
+    e.preventDefault();
+    if(!isOtpPassed){ alert("請先完成手機驗證"); return; }
+
+    const data = {
+      name:     document.getElementById("name").value,
+      birthday: document.getElementById("birthday").value,
+      email:    document.getElementById("email").value,
+      gender:   document.querySelector('input[name="gender"]:checked').value,
+      phone:    document.getElementById("phone").value,
+      plan:     Array.from(document.querySelectorAll(".plan:checked")).map(x=>x.value)
+    };
+
+    fetch(APP_SCRIPT_ENDPOINT,{
+      method:"POST",
+      body:JSON.stringify(data)
+    }).then(res=>res.text())
+      .then(()=>{
+        window.location.href="success.html";
+      });
+  }
 </script>
 </body>
 </html>
