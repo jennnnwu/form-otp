@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>OTP 驗證表單</title>
+<style>
+  label{display:block;margin-top:10px;}
+  .otp-area{display:none;}
+</style>
+</head>
+<body>
+<h2>報名表</h2>
+
+<form id="myForm">
+  <label>姓名 <input id="name" required></label>
+  <label>出生年月日 <input id="birthday" type="date" required></label>
+  <label>E-mail <input id="email" type="email" required></label>
+
+  <label>性別
+      <input type="radio" name="gender" value="男" required>男
+      <input type="radio" name="gender" value="女">女
+  </label>
+
+  <label>手機 +886 <input id="phone" placeholder="912345678" required></label>
+  <button type="button" id="sendOtp">發送OTP</button>
+
+  <div class="otp-area">
+    <label>輸入驗證碼 <input id="otp"></label>
+    <button type="button" id="verifyOtp">驗證送出</button>
+    <span id="otpResult"></span>
+  </div>
+
+  <label>目前有做哪些規劃？</label>
+  <label><input type="checkbox" class="plan" value="健康險">健康險</label>
+  <label><input type="checkbox" class="plan" value="意外險">意外險</label>
+  <label><input type="checkbox" class="plan" value="分紅保單">分紅保單</label>
+  <label><input type="checkbox" class="plan" value="目前都沒有">目前都沒有</label>
+
+  <br>
+  <button id="submitBtn" disabled>送出</button>
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
+<script>
+  const ACCOUNT_SID  = "ACbeafa0d9172768d4f94afc054b70a0fd";
+  const AUTH_TOKEN   = "6fb77ef2b44a3113507bf227f5ab1684";
+  const VERIFY_SID   = "VAdfdcd6e0f291f5a7ff4656a244b7f2bb";
+  const APP_SCRIPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbwhLAwCKpKef2aUhYdvEmPv8hLP0_XsN4zUMzzqz8X6_jt7ACL3Yse7QHPNzgCGfAFJ/exec";
+
+  let isOtpPassed = false;
+
+  document.getElementById("sendOtp").onclick = async function(){
+    const phone = document.getElementById("phone").value;
+    const api = `https://verify.twilio.com/v2/Services/${VERIFY_SID}/Verifications`;
+    alert('OTP 發送中…');
+
+    await axios.post(api, {
+        To: `+886${phone}`,
+        Channel: "sms"
+      }, {
+        auth: { username: ACCOUNT_SID, password: AUTH_TOKEN }
+      })
+      .then(()=> {
+        alert("驗證碼已發送");
+        document.querySelector(".otp-area").style.display = "block";
+      })
+      .catch((e)=>{
+        console.error(e);
+        alert("發送失敗，請檢查手機格式或白名單！");
+      });
+  };
+
+  document.getElementById("verifyOtp").onclick = async function(){
+    const phone = document.getElementById("phone").value;
+    const otp = document.getElementById("otp").value;
+    const api = `https://verify.twilio.com/v2/Services/${VERIFY_SID}/VerificationCheck`;
+
+    await axios.post(api, {
+        To: `+886${phone}`,
+        Code: otp
+      }, {
+        auth: { username: ACCOUNT_SID, password: AUTH_TOKEN }
+      })
+      .then((res)=>{
+        if(res.data.status==="approved"){
+          isOtpPassed = true;
+          document.getElementById("otpResult").textContent = "✅ 驗證成功";
+          document.getElementById("submitBtn").disabled = false;
+        }else{
+          document.getElementById("otpResult").textContent = "❌ 驗證失敗";
+        }
+      })
+      .catch(()=> alert("驗證失敗"));
+  };
+
+  document.getElementById("myForm").onsubmit = function(e){
+    e.preventDefault();
+    if(!isOtpPassed){ alert("請先完成手機驗證"); return; }
+
+    const data = {
+      name:     document.getElementById("name").value,
+      birthday: document.getElementById("birthday").value,
+      email:    document.getElementById("email").value,
+      gender:   document.querySelector('input[name="gender"]:checked').value,
+      phone:    document.getElementById("phone").value,
+      plan:     Array.from(document.querySelectorAll(".plan:checked")).map(x=>x.value)
+    };
+
+    fetch(APP_SCRIPT_ENDPOINT,{
+      method:"POST",
+      body:JSON.stringify(data)
+    }).then(res=>res.text())
+      .then(()=>{
+        window.location.href="success.html";
+      });
+  }
+</script>
+</body>
+</html>
