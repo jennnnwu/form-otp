@@ -22,8 +22,7 @@
     <input type="radio" name="gender" value="女">女
   </label>
 
-  <label>手機（去掉 0，例如：912345678）
-    <input id="phone" required></label>
+  <label>手機（去掉 0，例如：912345678）<input id="phone" required></label>
   <button type="button" id="sendOtp">發送 OTP</button>
 
   <div class="otp-area">
@@ -43,7 +42,7 @@
 </form>
 
 <script>
-const ZAP_WEBHOOK = "https://hooks.zapier.com/hooks/catch/24264918/utmia7n/";  // <--- 換成你自己的 Zap 網址
+const ZAP_WEBHOOK = "https://hooks.zapier.com/hooks/catch/24264918/utmia7n/";
 let isOtpPassed = false;
 
 // 發送 OTP
