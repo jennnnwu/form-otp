@@ -45,33 +45,57 @@
 const ZAP_WEBHOOK = "https://hooks.zapier.com/hooks/catch/24264918/utmia7n/";
 let generatedOtp = "";
 
-// 按下發送時產生6位OTP
+// 按下發送 OTP
 document.getElementById("sendOtp").onclick = async function(){
   const phoneVal = document.getElementById("phone").value;
   if(!phoneVal) return alert("請先填手機號碼");
-  // 產生 6 位驗證碼
+
+  // 產生隨機6位驗證碼
   generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  await fetch(ZAP_WEBHOOK,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action:"send_sms", phone:`+886${phoneVal}`, otp:generatedOtp})
+
+  // 呼叫 Zapier Webhook 送出 SMS
+  await fetch(ZAP_WEBHOOK, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ action:"send_sms", phone:`+886${phoneVal}`, otp:generatedOtp })
   });
   alert("驗證碼已發送到手機，請查看簡訊");
-  document.querySelector('.otp-area').style.display='block';
+  document.querySelector(".otp-area").style.display = "block";
 };
 
-// 檢核使用者輸入
-document.getElementById("verifyOtp").onclick = async function(){
+// 使用者輸入驗證碼
+document.getElementById("verifyOtp").onclick = function(){
   const otpVal = document.getElementById("otp").value;
   if(otpVal === generatedOtp){
     document.getElementById("otpResult").innerText = "✅ 驗證成功";
     document.getElementById("submitBtn").disabled = false;
-  } else {
+  }else{
     alert("驗證失敗，請重新輸入");
   }
 };
-</script>
 
+// 寫入 Google Sheet
+document.getElementById("myForm").onsubmit = async function(e){
+  e.preventDefault();
+  if(!generatedOtp) return alert("請先完成手機驗證");
+
+  const data = {
+    name:document.getElementById("name").value,
+    birthday:document.getElementById("birthday").value,
+    email:document.getElementById("email").value,
+    gender:document.querySelector('input[name="gender"]:checked').value,
+    phone:document.getElementById("phone").value,
+    plan: Array.from(document.querySelectorAll(".plan:checked")).map(x=>x.value)
+  };
+
+  await fetch(ZAP_WEBHOOK, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ action:"submit", ...data })
+  });
+
+  window.location.href="success.html";
+};
+</script>
 </body>
 </html>
